@@ -2,13 +2,13 @@
 
 Servo testServo;
 
-int potPin = A0;
-int servoPin = 2;
+int potPin = A2;
+int servoPin = 9;
 
 void setup() {
   Serial.begin(9600);
   testServo.attach(servoPin);
-  Serial.println("simple test running...");
+  Serial.println("init");
 }
 
 void loop() {
