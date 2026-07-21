@@ -8,15 +8,15 @@
 const uint8_t NUM_JOINTS = 2;
 const uint8_t POT_PIN[NUM_JOINTS] = { A2, A3 };
 const uint8_t SERVO_PIN[NUM_JOINTS] = { 9, 10 };
-const uint8_t FSR_PIN[2] = { A4, A5 };
-const uint8_t VIB_PIN[3] = { 3, 5 };
+const uint8_t FSR_PIN[1] = { A4 };
+const uint8_t VIB_PIN[2] = { 5,6 };
 
 const int SERVO_MIN[NUM_JOINTS] = { 5, 5 };
 const int SERVO_MAX[NUM_JOINTS] = { 175, 175 };
 
 const int FSR_THRESHOLD = 120;
 const int FSR_CEILING = 800;
-const uint8_t VIB_MIN_PWM = 70;
+const uint8_t VIB_MIN_PWM = 80;
 const uint8_t VIB_MAX_PWM = 255;
 
 const float ALPHA = 0.2f;
@@ -30,6 +30,11 @@ const uint8_t CONFIRM_N = 4;
 const int CONFIRM_TOL = 40;
 const uint16_t FAULT_TICKS = 20;
 
+float fsrFilt = 0;
+bool vibLatched = false;
+const int FSR_HYST = 25;
+const float FSR_ALPHA = 0.15f;
+
 const unsigned long PRINT_INTERVAL = 200;
 
 Servo joint[NUM_JOINTS];
@@ -41,8 +46,8 @@ uint8_t candCount[NUM_JOINTS];
 uint16_t rejects[NUM_JOINTS];
 bool chanFaulted[NUM_JOINTS];
 
-int fsrRaw[2];
-uint8_t vibDuty[3];
+int fsrRaw[1];
+uint8_t vibDuty[1];
 unsigned long lastPrint = 0;
 unsigned long lastServoUpdate = 0;
 
@@ -95,14 +100,16 @@ void setup() {
     joint[i].write(lastAngle[i]);
   }
 
-  for (uint8_t m = 0; m < 3; m++) {
+for (uint8_t m = 0; m < 2; m++) {
     pinMode(VIB_PIN[m], OUTPUT);
     analogWrite(VIB_PIN[m], 0);
-    vibDuty[m] = 0;
   }
+  vibDuty[0] = 0;
+  fsrFilt = readFSR(FSR_PIN[0]);
 
   Serial.println(F("online"));
-  Serial.println(F("A0 A1 A2 A3 | rejects"));
+  Serial.println(F("FSR\tFILT\tDUTY\tLATCH"));
+
   delay(300);
 }
 
@@ -156,27 +163,22 @@ void loop() {
     for (uint8_t i = 0; i < NUM_JOINTS; i++) updateJoint(i);
   }
 
+
   fsrRaw[0] = readFSR(FSR_PIN[0]);
-  fsrRaw[1] = readFSR(FSR_PIN[1]);
+  fsrFilt = (FSR_ALPHA * fsrRaw[0]) + ((1.0f - FSR_ALPHA) * fsrFilt);
 
-  vibDuty[0] = forceToDuty(fsrRaw[0]);
-  vibDuty[1] = forceToDuty(fsrRaw[1]);
-  vibDuty[2] = forceToDuty(max(fsrRaw[0], fsrRaw[1]));
+  if (!vibLatched && fsrFilt > FSR_THRESHOLD + FSR_HYST) vibLatched = true;
+  if (vibLatched && fsrFilt < FSR_THRESHOLD - FSR_HYST) vibLatched = false;
 
-  /*
-  for (uint8_t m = 0; m < 3; m++) analogWrite(VIB_PIN[m], vibDuty[m]);
-  */
+  vibDuty[0] = vibLatched ? forceToDuty((int)fsrFilt) : 0;
+
+  for (uint8_t m = 0; m < 2; m++) analogWrite(VIB_PIN[m], vibDuty[0]);
 
   if (millis() - lastPrint >= PRINT_INTERVAL) {
     lastPrint = millis();
-    for (uint8_t i = 0; i < NUM_JOINTS; i++) {
-      Serial.print(lastGoodRaw[i]);
-      Serial.print('\t');
-    }
-    Serial.print(F("| "));
-    for (uint8_t i = 0; i < NUM_JOINTS; i++) {
-      Serial.print(rejects[i]);
-      Serial.print(i == NUM_JOINTS - 1 ? '\n' : '\t');
-    }
+    Serial.print(fsrRaw[0]);      Serial.print('\t');
+    Serial.print((int)fsrFilt);   Serial.print('\t');
+    Serial.print(vibDuty[0]);     Serial.print('\t');
+    Serial.println(vibLatched ? 1 : 0);
   }
 }
