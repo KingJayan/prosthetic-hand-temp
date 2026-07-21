@@ -3,7 +3,7 @@
   A4 = index
 */
 
-const uint8_t FSR_PIN[1] = {A4};
+const uint8_t FSR_PIN = A4;
 const unsigned long PRINT_INTERVAL = 100;
 
 unsigned long lastPrint = 0;
@@ -15,7 +15,7 @@ void setup() {
 
 void loop() {
 
-  int fsr1 = analogRead(FSR_PIN[0]);
+  int fsr1 = analogRead(FSR_PIN);
 
   if (millis() - lastPrint >= PRINT_INTERVAL) {
     lastPrint = millis();
