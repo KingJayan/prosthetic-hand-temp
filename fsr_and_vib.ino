@@ -2,15 +2,12 @@
   fsr + haptic test
 
   A4 -> index FSR
-  A5 -> middle FSR
 
   D3 -> index motor
-  D5 -> middle motor
-  D6 -> palm motor
 */
 
-const uint8_t FSR_PIN = A4;
-const uint8_t VIB_PIN = 3;
+const uint8_t FSR_PIN[1] = {A4};
+const uint8_t VIB_PIN[1] = {3};
 
 const int FSR_THRESHOLD = 120;
 const int FSR_CEILING = 800;
@@ -46,14 +43,14 @@ void setup() {
   Serial.begin(9600);
 
   pinMode(VIB_PIN, OUTPUT);
-  analogWrite(VIB_PIN, 0);
+  analogWrite(VIB_PIN[0], 0);
 
-  Serial.println("FSR + Haptics Test");
+  Serial.println("touch + haptics test");
 }
 
 void loop() {
 
-  fsrRaw = analogRead(FSR_PIN);
+  fsrRaw = analogRead(FSR_PIN[0]);
   vibDuty = forceToDuty(fsrRaw);
 
   analogWrite(VIB_PIN, vibDuty);
@@ -62,9 +59,9 @@ void loop() {
 
     lastPrint = millis();
 
-    Serial.print("Index FSR: ");
-    Serial.print(fsrRaw);
+    Serial.print("FSR: ");
+    Serial.println(fsrRaw);
     Serial.print("  PWM: ");
-    Serial.print(vibDuty);
+    Serial.println(vibDuty);
   }
 }
